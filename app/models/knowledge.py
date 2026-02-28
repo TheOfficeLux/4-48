@@ -18,7 +18,7 @@ class KnowledgeChunk(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(1536), nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(1024), nullable=True)
     topic: Mapped[str] = mapped_column(String(100), nullable=False)
     subject_area: Mapped[str | None] = mapped_column(String(100), nullable=True)
     difficulty_level: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-10
