@@ -1,4 +1,4 @@
-"""EmbeddingService: OpenAI text-embedding-3-small (1536 dims) with Redis cache."""
+"""EmbeddingService: Mistral mistral-embed (1024 dims) with Redis cache."""
 
 import asyncio
 import hashlib
@@ -8,9 +8,11 @@ from app.constants import CACHE_EMBEDDING_TTL
 from app.exceptions import LearningServiceUnavailableError
 from app.redis_client import get_redis
 
+MISTRAL_EMBED_DIMS = 1024
+
 
 class EmbeddingService:
-    """OpenAI embeddings with Redis cache keyed by sha256(text)[:16]."""
+    """Mistral embeddings with Redis cache keyed by sha256(text)[:16]."""
 
     def __init__(self):
         self.settings = get_settings()
@@ -20,11 +22,14 @@ class EmbeddingService:
     def client(self):
         if self._client is None:
             from openai import AsyncOpenAI
-            self._client = AsyncOpenAI(api_key=self.settings.openai_api_key)
+            self._client = AsyncOpenAI(
+                base_url="https://api.mistral.ai/v1",
+                api_key=self.settings.mistral_api_key,
+            )
         return self._client
 
     async def embed(self, text: str) -> list[float]:
-        """Return 1536-dim embedding; use cache if present. Retries on 429, raises LearningServiceUnavailableError on quota/errors."""
+        """Return 1024-dim embedding (Mistral); use cache if present. Retries on 429, raises LearningServiceUnavailableError on quota/errors."""
         key_hex = hashlib.sha256(text.encode()).hexdigest()[:16]
         redis = get_redis()
         if redis:
