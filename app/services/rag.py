@@ -92,7 +92,7 @@ class RAGPipeline:
             chunk_ids = [c.chunk_id for c in chunks]
             chunks_used = [{"topic": c.topic, "difficulty_level": c.difficulty_level, "format_type": c.format_type} for c in chunks]
         except LearningServiceUnavailableError as e:
-            logger.warning("openai_unavailable", reason=str(e.cause) if getattr(e, "cause", None) else str(e))
+            logger.warning("llm_unavailable", reason=str(e.cause) if getattr(e, "cause", None) else str(e))
             response_text = FALLBACK_RESPONSE
             chunk_ids = []
             chunks_used = []
@@ -119,15 +119,13 @@ class RAGPipeline:
         return interaction.interaction_id, response_text, rules.ui_directives, rules.session_constraints, chunks_used, response_time_ms
 
     def _get_llm_client(self):
-        """Return the chat LLM client (Mistral or OpenAI) based on config."""
+        """Return the chat LLM client (Mistral)."""
         from openai import AsyncOpenAI
 
-        if self.settings.llm_provider == "mistral":
-            return AsyncOpenAI(
-                base_url="https://api.mistral.ai/v1",
-                api_key=self.settings.mistral_api_key,
-            )
-        return AsyncOpenAI(api_key=self.settings.openai_api_key)
+        return AsyncOpenAI(
+            base_url="https://api.mistral.ai/v1",
+            api_key=self.settings.mistral_api_key,
+        )
 
     async def _call_llm(self, system_prompt: str, user_message: str) -> str:
         import asyncio
