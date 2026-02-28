@@ -16,16 +16,10 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
-    # OpenAI (embeddings)
-    openai_api_key: str = ""
-
-    # LLM for /ask: "openai" or "mistral"
-    llm_provider: str = "mistral"
-    llm_model: str = "mistral-small-latest"
+    # Mistral (embeddings + chat for /ask)
     mistral_api_key: str = ""
-
-    # OpenAI (only used for embeddings and when llm_provider=openai)
-    embedding_model: str = "text-embedding-3-small"
+    embedding_model: str = "mistral-embed"
+    llm_model: str = "mistral-small-latest"
 
     # JWT
     jwt_secret: str = "change-me-in-production-minimum-32-chars"
