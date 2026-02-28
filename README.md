@@ -8,8 +8,8 @@ Production-grade, AI-powered adaptive learning platform for children with neurod
 - **API:** FastAPI 0.115+ (async)  
 - **Database:** PostgreSQL 16 + pgvector + TimescaleDB  
 - **Cache:** Redis 7  
-- **Embeddings:** OpenAI text-embedding-3-small  
-- **LLM:** gpt-4o-mini (configurable)  
+- **Embeddings:** Mistral mistral-embed (1024 dims)  
+- **LLM:** Mistral mistral-small-latest (chat for /ask)  
 - **Auth:** JWT (python-jose + bcrypt)  
 - **Migrations:** Alembic  
 
