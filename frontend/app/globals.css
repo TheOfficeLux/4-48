@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f0f9ff;
+  --card: #ffffff;
+  --primary: #0284c7;
+  --primary-soft: #38bdf8;
+  --text: #0f172a;
+  --text-muted: #64748b;
+}
+
+body {
+  @apply antialiased text-slate-800 bg-sky-50 min-h-screen;
+}
+
+/* Child-friendly: large tap targets, no tiny click areas */
+.btn-big {
+  @apply min-h-[48px] min-w-[120px] px-6 py-3 rounded-2xl text-lg font-semibold transition shadow-md hover:shadow-lg active:scale-[0.98];
+}
+
+.card-soft {
+  @apply bg-white rounded-3xl shadow-lg border border-sky-100 p-6;
+}
+
+.input-big {
+  @apply w-full min-h-[48px] px-4 rounded-xl border-2 border-sky-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none text-lg;
+}
