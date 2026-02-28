@@ -2,8 +2,6 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.dependencies import get_db, security
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 from app.services.auth_service import (
     create_access_token,

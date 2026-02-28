@@ -91,7 +91,15 @@ export function startSession(childId: string) {
 }
 
 export function endSession(sessionId: string) {
-  return api<{ session_id: string; total_interactions: number; session_quality: number | null }>(`/api/sessions/${sessionId}/end`, {
+  return api<{
+    session_id: string;
+    total_interactions: number;
+    avg_response_time_ms: number | null;
+    frustration_events: number;
+    hyperfocus_flag: boolean;
+    session_quality: number | null;
+    topics_covered: string[] | null;
+  }>(`/api/sessions/${sessionId}/end`, {
     method: "POST",
   });
 }
@@ -101,6 +109,16 @@ export function getSession(sessionId: string) {
 }
 
 // Learn
+export function getUsage() {
+  return api<{
+    date: string;
+    llm_requests: number;
+    llm_daily_limit: number;
+    embed_requests: number;
+    embed_daily_limit: number;
+  }>("/api/learn/usage");
+}
+
 export function ask(childId: string, sessionId: string, inputText: string) {
   return api<{
     interaction_id: string;

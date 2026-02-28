@@ -21,16 +21,3 @@ async_session_factory = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
-
-
-async def get_db_session() -> AsyncSession:
-    """Yield a new async session (for use with Depends or middleware)."""
-    async with async_session_factory() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()

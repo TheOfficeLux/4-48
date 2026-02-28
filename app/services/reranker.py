@@ -48,7 +48,8 @@ class ProfileAwareReranker:
             score = 0.0
             if c.format_type in preferred_modalities:
                 score += RERANK_PREFERRED_MODALITY_BONUS
-            target_flesch = RERANK_FLESCH_TARGET_BASE - getattr(state, "cognitive_load", 0.3) * RERANK_FLESCH_COGNITIVE_FACTOR
+            _load = getattr(state, "cognitive_load", None)
+            target_flesch = RERANK_FLESCH_TARGET_BASE - (_load if _load is not None else 0.3) * RERANK_FLESCH_COGNITIVE_FACTOR
             if c.flesch_score < target_flesch:
                 score -= (target_flesch - c.flesch_score) * RERANK_FLESCH_PENALTY_PER_POINT
             if any(d.startswith("ASD") for d in diagnoses):

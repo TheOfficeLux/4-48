@@ -16,10 +16,10 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
-    # Mistral (embeddings + chat for /ask)
-    mistral_api_key: str = ""
-    embedding_model: str = "mistral-embed"
-    llm_model: str = "mistral-small-latest"
+    # Google AI Studio (embeddings + chat) — set GOOGLE_API_KEY in .env
+    google_api_key: str = ""
+    embedding_model: str = "gemini-embedding-001"
+    llm_model: str = "gemini-2.0-flash"
 
     # JWT
     jwt_secret: str = "change-me-in-production-minimum-32-chars"
@@ -33,11 +33,9 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 700
     llm_temperature: float = 0.35
 
-    # State encoder
-    state_encoder_model: str = "all-MiniLM-L6-v2"
-
-    # Logging
-    log_level: str = "INFO"
+    # Usage limits (shown in UI; approximate free-tier limits)
+    llm_daily_limit: int = 60
+    embed_daily_limit: int = 500
 
 
 _settings: Settings | None = None

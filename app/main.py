@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.database import async_session_factory, engine
+from app.redis_client import close_redis
 from app.exceptions import LearningServiceUnavailableError
 from app.middleware.logging import logging_middleware
 from app.routers import admin, auth, children, learn, progress, sessions
@@ -28,6 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Redis is created lazily in services that need it
         yield
     finally:
+        await close_redis()
         await engine.dispose()
         logger.info("Shutdown complete")
 

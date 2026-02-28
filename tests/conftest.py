@@ -1,4 +1,4 @@
-"""Pytest fixtures: test_app, db, mock_openai."""
+"""Pytest fixtures: test_app, db, mock_google_ai."""
 
 import asyncio
 from typing import AsyncGenerator
@@ -60,18 +60,14 @@ async def async_client(test_app):
 
 
 @pytest.fixture
-def mock_openai_embed():
-    with patch("app.services.embeddings.AsyncOpenAI") as m:
-        inst = MagicMock()
-        inst.embeddings.create = AsyncMock(
-            return_value=MagicMock(data=[MagicMock(embedding=[0.1] * 1536)])
-        )
-        m.return_value = inst
-        yield inst
+def mock_google_embed():
+    with patch("app.services.embeddings.EmbeddingService.embed", new_callable=AsyncMock) as m:
+        m.return_value = [0.1] * 768
+        yield m
 
 
 @pytest.fixture
-def mock_openai_chat():
+def mock_google_chat():
     with patch("app.services.rag.RAGPipeline._call_llm", new_callable=AsyncMock) as m:
         m.return_value = "This is a sample response."
         yield m

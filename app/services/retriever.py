@@ -22,7 +22,15 @@ class HybridRetriever:
     ) -> list[KnowledgeChunk]:
         filters = rules.content_filters
         max_difficulty = filters.get("max_difficulty", 10)
-        readiness = getattr(state, "readiness_score", 0.8)
+        readiness = 0.8
+        if state is not None:
+            r = getattr(state, "readiness_score", None)
+            if r is not None:
+                try:
+                    readiness = float(r)
+                except (TypeError, ValueError):
+                    pass
+        readiness = max(0.0, min(1.0, readiness))
         max_difficulty = min(max_difficulty, max(1, round(readiness * 10)))
         min_flesch = filters.get("min_flesch", 0)
         sensory_cap = filters.get("sensory_cap", 1.0)
@@ -34,7 +42,7 @@ class HybridRetriever:
             AND k.sensory_load <= :sensory_cap
             AND k.flesch_score >= :min_flesch
             AND k.embedding IS NOT NULL
-            ORDER BY (1 - (k.embedding <=> :vec::vector)) * :w1
+            ORDER BY (1 - (k.embedding <=> CAST(:vec AS vector))) * :w1
                 + COALESCE(ts_rank(to_tsvector('english', k.content), plainto_tsquery('english', :query)), 0) * :w2 DESC
             LIMIT :top_k
         """)

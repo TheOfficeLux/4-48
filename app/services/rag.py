@@ -16,12 +16,13 @@ from app.services.reranker import ProfileAwareReranker
 from app.services.prompt import DynamicPromptBuilder
 from app.config import get_settings
 from app.redis_client import get_redis
-from app.constants import CACHE_STATE_TTL, CACHE_MASTERY_WEAK_TTL
+from app.usage import record_llm_use
+from app.constants import CACHE_MASTERY_WEAK_TTL
 from app.exceptions import LearningServiceUnavailableError
 
 logger = structlog.get_logger()
 
-# Shown to the child when OpenAI is rate-limited, out of quota, or unreachable
+# Shown when Google AI is rate-limited, out of quota, or unreachable
 FALLBACK_RESPONSE = (
     "I'm having a little trouble right now. Please try again in a minute, "
     "or ask your grown-up for help."
@@ -38,6 +39,48 @@ class RAGPipeline:
         self.prompt_builder = DynamicPromptBuilder()
         self.accessibility = AccessibilityEngine()
         self.settings = get_settings()
+
+    def _get_llm_client(self):
+        """Return Google AI chat client."""
+        from google import genai
+
+        return genai.Client(api_key=self.settings.google_api_key)
+
+    async def _call_llm(self, system_prompt: str, user_message: str) -> str:
+        import asyncio
+
+        from google.genai.types import GenerateContentConfig
+
+        from app.exceptions import LearningServiceUnavailableError
+
+        config = GenerateContentConfig(
+            system_instruction=system_prompt,
+            max_output_tokens=self.settings.llm_max_tokens,
+            temperature=self.settings.llm_temperature,
+        )
+        for attempt in range(3):
+            # New client per attempt: exiting "async with client.aio" closes the aio client, so reuse would raise "client has been closed"
+            client = self._get_llm_client()
+            try:
+                async with client.aio as aio_client:
+                    response = await aio_client.models.generate_content(
+                        model=self.settings.llm_model,
+                        contents=user_message,
+                        config=config,
+                    )
+                if response and getattr(response, "text", None):
+                    return response.text.strip()
+                return ""
+            except Exception as e:
+                err_str = str(e).lower()
+                if "429" in err_str or "rate" in err_str or "quota" in err_str:
+                    if attempt < 2:
+                        await asyncio.sleep(2**attempt)
+                        continue
+                raise LearningServiceUnavailableError(
+                    "Learning assistant is temporarily unavailable. Please try again in a few minutes.",
+                    cause=e,
+                ) from e
 
     async def ask(
         self,
@@ -89,6 +132,7 @@ class RAGPipeline:
                 neuro_profile=neuro, disabilities=disabilities,
             )
             response_text = await self._call_llm(system_prompt, input_text)
+            await record_llm_use()
             chunk_ids = [c.chunk_id for c in chunks]
             chunks_used = [{"topic": c.topic, "difficulty_level": c.difficulty_level, "format_type": c.format_type} for c in chunks]
         except LearningServiceUnavailableError as e:
@@ -117,48 +161,6 @@ class RAGPipeline:
             sess.total_interactions = (sess.total_interactions or 0) + 1
             await db.flush()
         return interaction.interaction_id, response_text, rules.ui_directives, rules.session_constraints, chunks_used, response_time_ms
-
-    def _get_llm_client(self):
-        """Return the chat LLM client (Mistral)."""
-        from openai import AsyncOpenAI
-
-        return AsyncOpenAI(
-            base_url="https://api.mistral.ai/v1",
-            api_key=self.settings.mistral_api_key,
-        )
-
-    async def _call_llm(self, system_prompt: str, user_message: str) -> str:
-        import asyncio
-        from openai import APIError, RateLimitError
-
-        from app.exceptions import LearningServiceUnavailableError
-
-        client = self._get_llm_client()
-        for attempt in range(3):
-            try:
-                resp = await client.chat.completions.create(
-                    model=self.settings.llm_model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_message},
-                    ],
-                    max_tokens=self.settings.llm_max_tokens,
-                    temperature=self.settings.llm_temperature,
-                )
-                return resp.choices[0].message.content or ""
-            except RateLimitError as e:
-                if attempt < 2:
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                raise LearningServiceUnavailableError(
-                    "Learning assistant is temporarily unavailable (rate limit or quota). Please try again in a few minutes.",
-                    cause=e,
-                ) from e
-            except (APIError, Exception) as e:
-                raise LearningServiceUnavailableError(
-                    "Learning assistant is temporarily unavailable. Please try again later.",
-                    cause=e,
-                ) from e
 
     async def _weak_topics(self, db: AsyncSession, child_id: UUID) -> list[str]:
         redis = get_redis()

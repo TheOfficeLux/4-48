@@ -3,8 +3,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { startSession, ask, sendSignal, endSession } from "@/lib/api";
+import { startSession, ask, sendSignal, endSession, getUsage } from "@/lib/api";
 import Nav from "@/components/Nav";
+
+type Usage = {
+  date: string;
+  llm_requests: number;
+  llm_daily_limit: number;
+  embed_requests: number;
+  embed_daily_limit: number;
+} | null;
 
 type Message = { role: "user" | "assistant"; text: string; interactionId?: string; topic?: string };
 
@@ -18,7 +26,17 @@ export default function LearnPage() {
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(true);
   const [uiDirectives, setUiDirectives] = useState<Record<string, unknown>>({});
+  const [usage, setUsage] = useState<Usage>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  async function fetchUsage() {
+    try {
+      const u = await getUsage();
+      setUsage(u);
+    } catch {
+      setUsage(null);
+    }
+  }
 
   useEffect(() => {
     if (!localStorage.getItem("access_token")) {
@@ -32,6 +50,7 @@ export default function LearnPage() {
       })
       .catch(() => setSessionId(""))
       .finally(() => setStarting(false));
+    fetchUsage();
   }, [childId, router]);
 
   useEffect(() => {
@@ -57,6 +76,7 @@ export default function LearnPage() {
         },
       ]);
       if (Object.keys(res.ui_directives || {}).length) setUiDirectives((prev) => ({ ...prev, ...res.ui_directives }));
+      fetchUsage();
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -128,6 +148,48 @@ export default function LearnPage() {
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto">
+          {usage && (
+            <div
+              className="card-soft bg-slate-50 border-slate-200 py-3 px-4"
+              title="API usage today — questions and embeddings"
+            >
+              <p className="text-xs font-medium text-slate-500 mb-2">Usage today ({usage.date})</p>
+              <div className="space-y-2">
+                <div>
+                  <div className="flex justify-between text-sm text-slate-600 mb-0.5">
+                    <span>Questions</span>
+                    <span>
+                      <strong>{usage.llm_requests}</strong> / {usage.llm_daily_limit}
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-sky-500 transition-all"
+                      style={{
+                        width: `${Math.min(100, (usage.llm_requests / usage.llm_daily_limit) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm text-slate-600 mb-0.5">
+                    <span>Embeddings</span>
+                    <span>
+                      <strong>{usage.embed_requests}</strong> / {usage.embed_daily_limit}
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-green-500 transition-all"
+                      style={{
+                        width: `${Math.min(100, (usage.embed_requests / usage.embed_daily_limit) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="card-soft bg-mint-50 border-mint-200">
             <p className="text-slate-700">
               <strong>Hi!</strong> Ask me anything you’re learning. I’ll keep my answers short and friendly.
@@ -169,6 +231,12 @@ export default function LearnPage() {
         </div>
 
         <form onSubmit={handleSend} className="fixed bottom-0 left-0 right-0 p-4 bg-sky-50 border-t border-sky-100">
+          {usage && (
+            <div className="max-w-2xl mx-auto flex justify-end gap-4 text-xs text-slate-500 mb-2">
+              <span>Questions {usage.llm_requests}/{usage.llm_daily_limit}</span>
+              <span>Embeddings {usage.embed_requests}/{usage.embed_daily_limit}</span>
+            </div>
+          )}
           <div className="max-w-2xl mx-auto flex gap-2">
             <input
               type="text"

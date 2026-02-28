@@ -60,3 +60,13 @@ class FeedbackResponse(BaseModel):
     topic: str
     mastery_level: float
     next_review_days: float | None
+
+
+class UsageResponse(BaseModel):
+    """Daily API usage for UI limits display."""
+
+    date: str
+    llm_requests: int
+    llm_daily_limit: int
+    embed_requests: int
+    embed_daily_limit: int

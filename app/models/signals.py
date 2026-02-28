@@ -4,10 +4,25 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, Float, ForeignKey, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base
+
+# Matches CREATE TYPE signal_type AS ENUM in migration 001
+SIGNAL_TYPE_ENUM = ENUM(
+    "KEYPRESS_DELAY",
+    "BACKSPACE_RATE",
+    "SCROLL_SPEED",
+    "ABANDON",
+    "RE_READ",
+    "EMOJI_REACTION",
+    "VOICE_HESITATION",
+    "HINT_REQUESTED",
+    "SKIP_REQUESTED",
+    name="signal_type",
+    create_type=False,
+)
 
 
 class BehavioralSignal(Base):
@@ -22,7 +37,7 @@ class BehavioralSignal(Base):
     child_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("child_profiles.child_id"), nullable=False
     )
-    signal_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    signal_type: Mapped[str] = mapped_column(SIGNAL_TYPE_ENUM, nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     raw_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, primary_key=True)

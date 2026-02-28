@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.dependencies import get_current_user_required, get_child
-from app.models import Caregiver, MasteryRecord
+from app.models import Caregiver, MasteryRecord, Interaction
 from app.schemas.learn import (
     AskRequest,
     AskResponse,
@@ -15,7 +15,9 @@ from app.schemas.learn import (
     StateSnapshot,
     FeedbackRequest,
     FeedbackResponse,
+    UsageResponse,
 )
+from app.usage import get_usage
 from app.services.rag import RAGPipeline
 from app.services.signals import SignalProcessor, StateService
 from app.services.fsrs import FSRSService
@@ -25,6 +27,15 @@ from app.redis_client import get_redis
 router = APIRouter()
 rag = RAGPipeline()
 fsrs = FSRSService()
+
+
+@router.get("/usage", response_model=UsageResponse)
+async def learn_usage(
+    current_user: Caregiver = Depends(get_current_user_required),
+):
+    """Return today's LLM and embedding usage vs configured daily limits (for UI)."""
+    data = await get_usage()
+    return UsageResponse(**data)
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -150,6 +161,13 @@ async def learn_feedback(
             )
             db.add(record)
         next_days = (res.next_review - now).total_seconds() / 86400
+
+    # Persist engagement feedback onto the interaction for analytics / timeline
+    interaction = await db.get(Interaction, body.interaction_id)
+    if interaction is not None:
+        interaction.engagement_score = body.engagement_score
+        interaction.child_reaction = body.child_reaction
+
     await db.flush()
     from app.redis_client import get_redis
     r = get_redis()

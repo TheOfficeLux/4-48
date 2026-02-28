@@ -5,6 +5,11 @@ from app.models.child import ChildProfile
 from app.services.accessibility import AdaptationRules
 
 
+def _num(val, default: float) -> float:
+    """Return default if val is None, else val (for safe numeric comparisons)."""
+    return default if val is None else val
+
+
 class DynamicPromptBuilder:
     """Build full LLM system prompt with zero hardcoding."""
 
@@ -32,15 +37,15 @@ class DynamicPromptBuilder:
             f"CHILD PROFILE: name={child.full_name}, age={age}, primary_language={child.primary_language}",
             f"Diagnoses: {', '.join(diagnoses) or 'none'}",
             f"Disabilities: {', '.join(getattr(d, 'disability_type', str(d)) for d in disabilities) or 'none'}",
-            f"Current cognitive_load={getattr(state, 'cognitive_load', 0.3)}, mood_score={getattr(state, 'mood_score', 0.2)}.",
+            f"Current cognitive_load={_num(getattr(state, 'cognitive_load', None), 0.3)}, mood_score={_num(getattr(state, 'mood_score', None), 0.2)}.",
         ]
         sections.append("\n".join(section1))
         rules = list(adaptation.prompt_rules)
-        if getattr(state, "cognitive_load", 0) > 0.75:
+        if _num(getattr(state, "cognitive_load", None), 0) > 0.75:
             rules.append("CRITICAL: Give the shortest possible answer and offer a break.")
-        if getattr(state, "mood_score", 0) < -0.35:
+        if _num(getattr(state, "mood_score", None), 0) < -0.35:
             rules.append("CRITICAL: Open with encouragement; never shame or criticise.")
-        if getattr(state, "readiness_score", 0.8) >= 0.9 and neuro and (neuro.hyperfocus_topics or []):
+        if _num(getattr(state, "readiness_score", None), 0.8) >= 0.9 and neuro and (neuro.hyperfocus_topics or []):
             rules.append("Child may be in hyperfocus; offer depth extension or bonus challenge if relevant.")
         if due_topics:
             rules.append(f"Gentle spaced repetition nudge for topics: {', '.join(due_topics[:3])}.")

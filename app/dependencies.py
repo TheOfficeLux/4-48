@@ -1,6 +1,5 @@
-"""FastAPI Depends: get_db, get_current_user, get_child."""
+"""FastAPI Depends: get_current_user, get_child."""
 
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
@@ -12,14 +11,6 @@ from app.models import Caregiver, ChildProfile
 from app.models.child import ChildProfile as ChildProfileModel
 
 security = HTTPBearer(auto_error=False)
-
-
-async def get_db(request: Request) -> AsyncSession:
-    """Yield async DB session from request state (set by middleware)."""
-    session: AsyncSession | None = getattr(request.state, "db", None)
-    if session is None:
-        raise RuntimeError("DB session not set on request state")
-    return session
 
 
 async def get_current_user_required(

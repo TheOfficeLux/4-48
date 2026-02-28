@@ -8,8 +8,8 @@ Production-grade, AI-powered adaptive learning platform for children with neurod
 - **API:** FastAPI 0.115+ (async)  
 - **Database:** PostgreSQL 16 + pgvector + TimescaleDB  
 - **Cache:** Redis 7  
-- **Embeddings:** Mistral mistral-embed (1024 dims)  
-- **LLM:** Mistral mistral-small-latest (chat for /ask)  
+- **Embeddings:** Google AI gemini-embedding-001 (768 dims, free tier)  
+- **LLM:** Google AI gemini-2.0-flash (free tier, no billing required)  
 - **Auth:** JWT (python-jose + bcrypt)  
 - **Migrations:** Alembic  
 
@@ -24,13 +24,12 @@ Production-grade, AI-powered adaptive learning platform for children with neurod
 
 2. **Environment**
 
-   Copy `.env.example` to `.env` and set at least:
+Copy `.env.example` to `.env` and set at least:
 
-   - `DATABASE_URL` — PostgreSQL (async: `postgresql+asyncpg://...`)
-   - `REDIS_URL`
-   - `OPENAI_API_KEY` — used for embeddings
-   - `MISTRAL_API_KEY` — used for /ask chat (set `LLM_PROVIDER=mistral` and `LLM_MODEL=mistral-small-latest`). Use `LLM_PROVIDER=openai` and `LLM_MODEL=gpt-4o-mini` to use OpenAI for chat instead.
-   - `JWT_SECRET` (min 32 chars for production)
+- `DATABASE_URL` — PostgreSQL (async: `postgresql+asyncpg://...`)
+- `REDIS_URL`
+- `GOOGLE_API_KEY` — get a free API key from [Google AI Studio](https://aistudio.google.com/). No billing or card required.
+- `JWT_SECRET` (min 32 chars for production)
 
 3. **Database**
 
@@ -52,18 +51,21 @@ Production-grade, AI-powered adaptive learning platform for children with neurod
 
 ## Docker Compose
 
-Starts PostgreSQL 16 (TimescaleDB + pgvector), Redis 7, the API, and the Next.js frontend:
+Starts PostgreSQL 16 (TimescaleDB + pgvector), Redis 7, the API, and the Next.js frontend.
+The API container's entrypoint automatically runs `alembic upgrade head` before starting, so you
+usually only need:
 
 ```bash
 docker compose up -d
-# Apply migrations (from host or exec into api):
-docker compose exec api alembic upgrade head
 ```
 
 - **db:** Postgres with extensions, volume `pgdata`  
 - **redis:** Redis 7  
 - **api:** FastAPI app on port 8000, healthcheck on `/health`  
 - **frontend:** Next.js app on port 3000 (open http://localhost:3000); uses `NEXT_PUBLIC_API_URL=http://localhost:8000` so the browser can call the API  
+
+**After changing API code**, rebuild and restart so the container uses the new code:  
+`docker compose up -d --build api`  
 
 ## API Overview
 
@@ -105,7 +107,7 @@ SESSION=$(curl -s -X POST http://localhost:8000/api/sessions/start \
   -d "{\"child_id\":\"$CHILD\"}" \
   | jq -r .session_id)
 
-# Ask (requires OpenAI key and ingested content for RAG)
+# Ask (requires GOOGLE_API_KEY and ingested content for RAG)
 curl -s -X POST http://localhost:8000/api/learn/ask \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \

@@ -1,4 +1,4 @@
-"""Switch embedding column to 1024 dims (Mistral mistral-embed).
+"""Alter embedding column to 768 dims (gemini-embedding-001 / text-embedding-005).
 
 Revision ID: 002
 Revises: 001
@@ -18,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.drop_index("idx_chunks_embedding", table_name="knowledge_chunks")
     op.execute(
-        "ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(1024) USING NULL"
+        "ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(768) USING NULL"
     )
     op.create_index(
         "idx_chunks_embedding",
